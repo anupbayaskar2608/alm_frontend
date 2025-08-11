@@ -1,0 +1,40 @@
+/* user data show  */
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.user-table th, .user-table td {
+  text-align: left;
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+.user-table th {
+  background: #f1f1f1;
+}
+
+.view-button,
+.edit-button,
+.delete-button {
+  border: none;
+  padding: 5px 10px;
+  margin-right: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.view-button {
+  background-color: #17a2b8;
+  color: #fff;
+}
+
+
+.edit-button {
+  background-color: #ffc107;
+  color: #fff;
+}
+.delete-button {
+  background: #dc3545;
+  color: white;
+}

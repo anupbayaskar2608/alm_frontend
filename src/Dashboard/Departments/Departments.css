@@ -1,0 +1,59 @@
+
+@media (max-width: 576px) {
+    .modal-dialog {
+      max-width: 90%; 
+    }
+
+    .form-label {
+      font-size: 14px;
+    }
+
+    .form-control {
+      font-size: 14px;
+    }
+
+    .btn {
+      font-size: 14px;
+      padding: 8px 12px;
+    }
+
+    .modal-header .btn-close {
+      font-size: 20px; 
+    }
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .table th, .table td {
+    padding: 8px;
+  }
+
+  .table th {
+    font-size: 14px;
+  }
+
+  .table td {
+    font-size: 12px;
+  }
+
+  .table-responsive {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table td {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .btn {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .d-flex {
+    flex-direction: column;
+  }
+}
