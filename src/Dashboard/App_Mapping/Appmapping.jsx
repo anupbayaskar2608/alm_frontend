@@ -1,4 +1,3 @@
-// Appmapping.jsx
 import React, { useState, useEffect } from "react";
 import AppMappingForm from "./Appmappingform";
 import AppMappingView from "./AppMappingView";
@@ -18,6 +17,7 @@ const Appmapping = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingAppMapping, setEditingAppMapping] = useState(null);
   const [viewAppMapping, setViewAppMapping] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchAppMapping();
@@ -27,7 +27,17 @@ const Appmapping = () => {
     try {
       const response = await fetch("http://localhost:5000/appvms");
       const data = await response.json();
-      setAppMapping(data);
+
+      // Filter duplicates by _id (remove duplicates if any)
+      const uniqueNetworkMappings = data.NetworkMappings.filter(
+        (item, index, self) =>
+          index === self.findIndex((t) => t._id === item._id)
+      );
+
+      setAppMapping({
+        ...data,
+        NetworkMappings: uniqueNetworkMappings,
+      });
     } catch (error) {
       console.error("Error fetching Application Mapping:", error);
     }
@@ -114,10 +124,34 @@ const Appmapping = () => {
     }
   };
 
+  // Live search filtering
+  const filteredMappings = appMapping.NetworkMappings.filter((app) => {
+    const region = appMapping.dbRegions.find((r) => r.region_id === app.region);
+    const owner = appMapping.dbUsersList.find((o) => o._id === app.owner_id);
+    const term = searchTerm.toLowerCase();
+
+    return (
+      app.apm_id?.toLowerCase().includes(term) ||
+      region?.region_name?.toLowerCase().includes(term) ||
+      owner?.fullname?.toLowerCase().includes(term)
+    );
+  });
+
   return (
     <div className="container mt-5">
       <h2 className="mb-4">Application Mapping</h2>
-      <div className="d-flex justify-content-end mb-3">
+
+      {/* Search box and Add button */}
+      <div className="d-flex justify-content-between mb-3">
+        <div className="input-group" style={{ maxWidth: "400px" }}>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search by APM ID, Region, or Owner"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
         <button
           className="btn btn-primary"
           onClick={() => {
@@ -129,6 +163,7 @@ const Appmapping = () => {
         </button>
       </div>
 
+      {/* Table */}
       <div className="table-responsive">
         <table className="table table-bordered table-hover">
           <thead className="table-dark">
@@ -141,8 +176,8 @@ const Appmapping = () => {
             </tr>
           </thead>
           <tbody>
-            {appMapping.NetworkMappings.length > 0 ? (
-              appMapping.NetworkMappings.map((app) => {
+            {filteredMappings.length > 0 ? (
+              filteredMappings.map((app) => {
                 const region = appMapping.dbRegions.find((r) => r.region_id === app.region);
                 const owner = appMapping.dbUsersList.find((o) => o._id === app.owner_id);
                 const mappedVMs = app.mapped_vms || [];
