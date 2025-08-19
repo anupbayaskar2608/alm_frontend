@@ -6,7 +6,7 @@ import Users from './Dashboard/Users/Users';
 import Regions from './Dashboard/Regions/Regions';
 import Departments from './Dashboard/Departments/Departments';
 import Services from './Dashboard/Services alm/Services';
-import Securitygroup from './Dashboard/Security_Group/Securitygroup';
+import Securitygroups from './Dashboard/Security_Groups/Securitygroups';
 import Appprofile from './Dashboard/App_Profile/Appprofile';
 import Workloads from './Dashboard/Work_Loads/Workloads';
 import Appmapping from './Dashboard/App_Mapping/Appmapping';
@@ -26,7 +26,7 @@ function App() {
             < Route path="regions" element={<Regions/>}/>
             < Route path="departments" element={<Departments/>}/>
             < Route path="services" element={<Services/>}/>
-            < Route path="securitygroup" element={<Securitygroup/>}/>
+            < Route path="securitygroups" element={<Securitygroups/>}/>
             < Route path="appprofile" element={<Appprofile/>}/>
             < Route path="workloads" element={<Workloads/>}/>
             <Route path="appmapping" element={<Appmapping/>}/>

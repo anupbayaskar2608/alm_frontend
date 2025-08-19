@@ -1,7 +1,8 @@
+// Appprofile.jsx
 import React, { useState, useEffect } from "react";
 import { FaEdit, FaEye, FaHome, FaTrash } from "react-icons/fa";
 import AppprofileForm from "./Appprofileform";
-import {  useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const Appprofile = () => {
   const [appProfiles, setAppProfiles] = useState([]);
@@ -10,13 +11,39 @@ const Appprofile = () => {
   const [viewOnly, setViewOnly] = useState(false);
   const [search, setSearch] = useState("");
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     fetchApplications();
-  }, []); 
-  const navigate = useNavigate();
+  }, []);
+
+  // ✅ Get token from localStorage
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token"); // store token in localStorage after login
+    if (!token) {
+      alert("Session expired. Please log in again.");
+      navigate("/login");
+      return {};
+    }
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
+
   const fetchApplications = async () => {
     try {
-      const response = await fetch("http://localhost:5000/Applications");
+      const response = await fetch("http://localhost:5000/api/Applications", {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      if (response.status === 401) {
+        alert("Unauthorized! Please log in again.");
+        navigate("/login");
+        return;
+      }
+
       const data = await response.json();
       setAppProfiles(data.applications);
     } catch (error) {
@@ -25,12 +52,17 @@ const Appprofile = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this application?")) return;
+    if (!window.confirm("Are you sure you want to delete this application?"))
+      return;
 
     try {
-      const response = await fetch(`http://localhost:5000/Applications/${id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `http://localhost:5000/api/Applications/${id}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
+      );
 
       if (!response.ok) throw new Error("Failed to delete application");
 
@@ -65,17 +97,20 @@ const Appprofile = () => {
       app.application_name.toLowerCase().includes(search.toLowerCase()) ||
       app.application_type.toLowerCase().includes(search.toLowerCase())
   );
+
   const HomeClick = () => {
     navigate("/dashboard");
   };
+
   return (
     <div className="container mt-5">
       <h2 className="mb-4">App Profiles</h2>
-        <div className="d-flex mb-3">
-              <button onClick={HomeClick} className="btn btn-light">
-                <FaHome size={20} color="gray" /> <b>Home</b>
-              </button>
-            </div>
+      <div className="d-flex mb-3">
+        <button onClick={HomeClick} className="btn btn-light">
+          <FaHome size={20} color="gray" /> <b>Home</b>
+        </button>
+      </div>
+
       <div className="d-flex justify-content-end mb-3">
         <input
           type="text"

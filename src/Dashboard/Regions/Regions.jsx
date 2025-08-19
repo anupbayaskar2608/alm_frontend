@@ -1,76 +1,151 @@
+// Regions.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import RegionsForm from "./Regionsform";
-
 import { FaEdit, FaEye, FaHome, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useConfirm } from "react-use-confirming-dialog";
+
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api";
+
 const Regions = () => {
   const [regions, setRegions] = useState([]);
   const [filteredRegions, setFilteredRegions] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editingRegion, setEditingRegion] = useState(null); 
   const [search, setSearch] = useState("");
-   const [viewOnly, setViewOnly] = useState(false);
-  const navigate = useNavigate();
+  const [showForm, setShowForm] = useState(false);
+  const [editingRegion, setEditingRegion] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
+  const [formData, setFormData] = useState({ region_name: "", postal_address: "", notes: "" });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchRegions();
-  }, []); 
+  const confirm = useConfirm();
+  const navigate = useNavigate();
 
   const fetchRegions = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/regions");
-      setRegions(response.data.regions);
-      setFilteredRegions(response.data.regions);
-    } catch (error) {
-      console.error("Error fetching regions:", error);
-      alert("Error loading regions. Please try again.");
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${BASE_URL}/regions`, {headers: { Authorization: `Bearer ${token}` }});
+      setRegions(res.data.regions);
+      setFilteredRegions(res.data.regions);
+    } catch (err) {
+      console.error("Error fetching regions:", err);
+      if (err.response?.status === 401) navigate("/login");
+      toast.error("Error loading regions.");
     }
   };
-  const handleDelete = async (regionId) => {
-    if (!window.confirm("Are you sure you want to delete this region?")) return;
-    try {
-      const response = await axios.delete(`http://localhost:5000/regions/${regionId}`);
-      if (response.status === 200) {
-        await fetchRegions();
-        alert("Region deleted successfully!");
-      } else {
-        throw new Error('Failed to delete region');
-      }
-    } catch (error) {
-      console.error("Error deleting region:", error);
-      alert("Error deleting region. Please try again.");
-    }
-  };
-  const handleSave = async (updatedRegion) => {
-    await fetchRegions();
-    setShowForm(false);
-    setEditingRegion(null);
-  };
-  const handleSearch = (e) => {
+
+  // Load regions when component mounts
+  useEffect(() => {
+    fetchRegions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleSearch(e) {
     const query = e.target.value.toLowerCase();
     setSearch(query);
     setFilteredRegions(
-      regions.filter((region) =>
-        region.region_name.toLowerCase().includes(query) ||
-        region.postal_address.toString().includes(query) ||
-        (region.notes && region.notes.toLowerCase().includes(query))
+      regions.filter(
+        (region) => (region.region_name || "").toLowerCase().includes(query) ||
+          (region.postal_address || "").toString().toLowerCase().includes(query) ||
+          (region.notes || "").toLowerCase().includes(query)
       )
     );
-  };
+  }
 
-  const editRegion = (region) => {
-    setEditingRegion(region);
+const handleDelete = async (region) => {
+  const ok = await confirm({
+    title: "Delete Region",
+    message: `Are you sure you want to delete the region "${region.region_name}"? This action cannot be undone.`,
+    confirmText: "Delete",
+    cancelText: "Cancel",
+  });
+  if (!ok) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    await axios.delete(`${BASE_URL}/regions/${region._id}`, {
+headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchRegions();
+    toast.success(`Region "${region.region_name}" deleted successfully!`);
+  } catch (err) {
+    console.error("Error deleting region:", err);
+    if (err.response?.status === 401) navigate("/login");
+    toast.error("Error deleting region.");
+  }
+};
+
+  const openAddForm = () => {
+    setEditingRegion(null);
+    setFormData({ region_name: "", postal_address: "", notes: "" });
+    setViewOnly(false);
+    setError(null);
     setShowForm(true);
   };
-  const viewUserHandler = (region) => {
+
+  const openEditForm = (region) => {
     setEditingRegion(region);
-    setViewOnly(true); 
+    setFormData({
+      region_name: region.region_name || "",
+      postal_address: region.postal_address || "",
+      notes: region.notes || "",
+    });
+    setViewOnly(false);
+    setError(null);
     setShowForm(true);
   };
 
-  const HomeClick = () => {
-    navigate("/dashboard");
+  const openViewForm = (region) => {
+    setEditingRegion(region);
+    setFormData({
+      region_name: region.region_name || "",
+      postal_address: region.postal_address || "",
+      notes: region.notes || "",
+    });
+    setViewOnly(true);
+    setError(null);
+    setShowForm(true);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+
+    if (!formData.region_name || !formData.postal_address) {
+      setError("Please fill out all required fields.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const method = editingRegion ? "put" : "post";
+      const url = editingRegion
+        ? `${BASE_URL}/regions/${editingRegion._id}`
+        : `${BASE_URL}/regions`;
+
+      await axios[method](url, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setShowForm(false);
+      fetchRegions();
+      toast.success(editingRegion ? "Region updated successfully!" : "Region added successfully!");
+    } catch (err) {
+      console.error("Error saving region:", err);
+      if (err.response?.status === 401) navigate("/login");
+      setError(err.response?.data?.message || "Error saving region.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingRegion(null);
+    setViewOnly(false);
+    setFormData({ region_name: "", postal_address: "", notes: "" });
+    setError(null);
   };
 
   return (
@@ -78,7 +153,7 @@ const Regions = () => {
       <h2 className="mb-4">Regions</h2>
 
       <div className="d-flex mb-3">
-        <button onClick={HomeClick} className="btn btn-light">
+        <button onClick={() => navigate("/dashboard")} className="btn btn-light">
           <FaHome size={20} color="gray" /> <b>Home</b>
         </button>
       </div>
@@ -91,13 +166,7 @@ const Regions = () => {
           value={search}
           onChange={handleSearch}
         />
-        <button 
-          className="btn btn-primary" 
-          onClick={() => {
-            setEditingRegion(null);
-            setShowForm(true);
-          }}
-        >
+        <button className="btn btn-primary" onClick={openAddForm}>
           ADD +
         </button>
       </div>
@@ -120,24 +189,13 @@ const Regions = () => {
                   <td>{region.postal_address}</td>
                   <td>{region.notes}</td>
                   <td>
-                  <button 
-                      className="btn btn-info btn-sm me-2" 
-                      onClick={() => viewUserHandler(region)}
-                    >
-                      <FaEye size={24} />
+                    <button className="btn btn-info btn-sm me-2" onClick={() => openViewForm(region)}>
+                      <FaEye />
                     </button>
-                    <button 
-                      className="btn btn-warning btn-sm me-2"
-                      onClick={() => editRegion(region)} 
-                      title="Edit Region"
-                    >
+                    <button className="btn btn-warning btn-sm me-2" onClick={() => openEditForm(region)}>
                       <FaEdit />
                     </button>
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={() => handleDelete(region._id)}
-                      title="Delete Region"
-                    >
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(region)}>
                       <FaTrash />
                     </button>
                   </td>
@@ -149,21 +207,83 @@ const Regions = () => {
                   No Record Found
                 </td>
               </tr>
-            )} 
+            )}
           </tbody>
         </table>
       </div>
 
       {showForm && (
-        <RegionsForm
-          onClose={() => {
-            setShowForm(false);
-            setEditingRegion(null);
-          }}
-          onSave={handleSave}
-          regionToEdit={editingRegion}
-          viewOnly={viewOnly}
-        /> 
+        <div className="modal show d-block" tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  {viewOnly ? "View Region" : editingRegion ? "Edit Region" : "Add Region"}
+                </h5>
+                <button type="button" className="btn-close" onClick={handleCloseForm}></button>
+              </div>
+              <div className="modal-body">
+                <form onSubmit={handleSave}>
+                  <div className="mb-3 row">
+                    <label className="col-sm-3 col-form-label">Region Name</label>
+                    <div className="col-sm-9">
+                      <input
+                        type="text"
+                        name="region_name"
+                        className="form-control"
+                        value={formData.region_name}
+                        onChange={(e) => setFormData({ ...formData, region_name: e.target.value })}
+                        disabled={viewOnly}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-3 row">
+                    <label className="col-sm-3 col-form-label">Postal Address</label>
+                    <div className="col-sm-9">
+                      <input
+                        type="text"
+                        name="postal_address"
+                        className="form-control"
+                        value={formData.postal_address}
+                        onChange={(e) => setFormData({ ...formData, postal_address: e.target.value })}
+                        disabled={viewOnly}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-3 row">
+                    <label className="col-sm-3 col-form-label">Notes</label>
+                    <div className="col-sm-9">
+                      <textarea
+                        name="notes"
+                        className="form-control"
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        disabled={viewOnly}
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  {error && <div className="alert alert-danger">{error}</div>}
+
+                  <div className="d-flex justify-content-between">
+                    {!viewOnly && (
+                      <button type="submit" className="btn btn-success" disabled={loading}>
+                        {loading ? "Saving..." : editingRegion ? "Update" : "Add"}
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-danger" onClick={handleCloseForm}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

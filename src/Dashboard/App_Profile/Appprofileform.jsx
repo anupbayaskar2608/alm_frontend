@@ -10,7 +10,7 @@ function AppprofileForm({
   const [formData, setFormData] = useState({
     apm_id: "",
     application_name: "",
-    application_type: "", 
+    application_type: "",
     application: "active-active",
     application_facing_type: "public",
     application_priority_type: "critical",
@@ -25,6 +25,19 @@ function AppprofileForm({
     }
   }, [editingAppProfile]);
 
+  // ✅ Helper to get headers with JWT
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token"); // stored at login
+    if (!token) {
+      alert("Session expired. Please log in again.");
+      return { "Content-Type": "application/json" };
+    }
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -34,27 +47,37 @@ function AppprofileForm({
     try {
       const requestData = { ...formData };
       let response;
+
       if (editingAppProfile) {
+        // ✅ Update with PUT + JWT
         response = await fetch(
-          `http://localhost:5000/Applications/${editingAppProfile._id}`,
+          `http://localhost:5000/api/Applications/${editingAppProfile._id}`,
           {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             body: JSON.stringify(requestData),
           }
         );
       } else {
-        response = await fetch("http://localhost:5000/Applications", {
+        // ✅ Create with POST + JWT
+        response = await fetch("http://localhost:5000/api/Applications", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify(requestData),
         });
+      }
+
+      if (response.status === 401) {
+        alert("Unauthorized. Please log in again.");
+        return;
       }
 
       if (!response.ok) throw new Error("Failed to submit form");
 
       const data = await response.json();
       editingAppProfile ? onUpdate(data) : onAdd(data);
+
+      // Reset form
       setFormData({
         apm_id: "",
         application_name: "",
@@ -66,6 +89,7 @@ function AppprofileForm({
       });
       onClose();
     } catch (error) {
+      console.error(error);
       setError("There was an error submitting the form.");
     }
   };
@@ -213,7 +237,7 @@ function AppprofileForm({
           {!viewOnly && (
             <div className="modal-footer">
               <button type="submit" className="btn btn-success">
-                Add
+                {editingAppProfile ? "Update" : "Add"}
               </button>
               <button
                 type="button"

@@ -27,40 +27,31 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
     selectedVMs: [],
   });
 
-  // Fetch data on mount
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Populate form when editing
   useEffect(() => {
     if (editingAppMapping) {
       setFormData({
         ...formData,
         ...editingAppMapping,
-        comments: editingAppMapping.comments || "",
-        selectedVMs: editingAppMapping.selectedVMs || [],
+        comments: editingAppMapping?.comments || "",
+        selectedVMs: editingAppMapping?.selectedVMs || [],
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingAppMapping]);
 
   const fetchData = async () => {
     try {
       const response = await fetch("http://localhost:5000/appvms");
       const data = await response.json();
-
       setApmData(data.dbAplication || []);
       setDepartmentData(data.dbDepartments || []);
+      setUserData(data.dbUsersList || []);
       setRegionData(data.dbRegions || []);
       setSecurityGroupData(data.dbSecurity || []);
       setVmData(data.dbVMs || []);
-
-      // Fetch users data separately
-      const userResponse = await fetch("http://localhost:5000/users");
-      const userList = await userResponse.json();
-
-      setUserData(Array.isArray(userList) ? userList : userList.users || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -83,8 +74,8 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
       setFormData((prev) => ({
         ...prev,
         [name]: value,
-        applicationMail: selectedOwner?.email || "",
-        applicationContact: selectedOwner?.phone || "",
+        applicationMail: selectedOwner?.email || selectedOwner?.fullname || "",
+        applicationContact: selectedOwner?.user_id || "",
       }));
     } else {
       setFormData((prev) => ({
@@ -94,37 +85,27 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
   return (
-    <div className="modal show d-block" tabIndex="-1" role="dialog" aria-modal="true">
-      <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div className="modal show d-block" tabIndex="-1">
+      <div className="modal-dialog modal-dialog-centered modal-lg">
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">Application Mapping</h5>
-            <button
-              type="button"
-              className="btn-close"
-              aria-label="Close"
-              onClick={onClose}
-            />
+            <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
           <div className="modal-body">
-            <Form onSubmit={handleSubmit}>
+            <Form
+              onSubmit={(e) => {
+                e.preventDefault();
+                onSave(formData);
+              }}
+            >
               {/* APM Section */}
               <Row className="mb-3">
                 <Col md={6}>
-                  <Form.Group controlId="apm_id">
+                  <Form.Group>
                     <Form.Label>APM ID</Form.Label>
-                    <Form.Select
-                      name="apm_id"
-                      value={formData.apm_id}
-                      onChange={handleInputChange}
-                      required
-                    >
+                    <Form.Select name="apm_id" value={formData.apm_id} onChange={handleInputChange}>
                       <option value="">Select Application ID</option>
                       {apmData.map((apm) => (
                         <option key={apm.apm_id} value={apm.apm_id}>
@@ -135,54 +116,34 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
                   </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Group controlId="application_name">
+                  <Form.Group>
                     <Form.Label>Application Name</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={formData.application_name}
-                      disabled
-                      readOnly
-                    />
+                    <Form.Control type="text" value={formData.application_name} disabled />
                   </Form.Group>
                 </Col>
               </Row>
 
               <Row className="mb-3">
                 <Col md={6}>
-                  <Form.Group controlId="application_type">
+                  <Form.Group>
                     <Form.Label>Application Type</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={formData.application_type}
-                      disabled
-                      readOnly
-                    />
+                    <Form.Control type="text" value={formData.application_type} disabled />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Group controlId="application_facing_type">
+                  <Form.Group>
                     <Form.Label>Application Facing Type</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={formData.application_facing_type}
-                      disabled
-                      readOnly
-                    />
+                    <Form.Control type="text" value={formData.application_facing_type} disabled />
                   </Form.Group>
                 </Col>
               </Row>
 
-              {/* Department & Head */}
+              {/* Department and Head */}
               <Row className="mb-3">
                 <Col md={6}>
-                  <Form.Group controlId="dept">
+                  <Form.Group>
                     <Form.Label>Department Name</Form.Label>
-                    <Form.Select
-                      name="dept"
-                      value={formData.dept}
-                      onChange={handleInputChange}
-                      required
-                    >
+                    <Form.Select name="dept" value={formData.dept} onChange={handleInputChange}>
                       <option value="">Select Department</option>
                       {departmentData.map((dept) => (
                         <option key={dept._id} value={dept._id}>
@@ -193,28 +154,21 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
                   </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Group controlId="departmentHead">
+                  <Form.Group>
                     <Form.Label>Department Head</Form.Label>
                     <Form.Select
                       name="departmentHead"
                       value={formData.departmentHead}
                       onChange={handleInputChange}
-                      required
-                      disabled={!formData.dept}
                     >
                       <option value="">Select Department Head</option>
                       {departmentData
                         .filter((dept) => dept._id === formData.dept)
                         .flatMap((dept) =>
                           (dept.dept_members || [])
-                            .filter(
-                              (member) =>
-                                member.key?.toLowerCase() === "department_head"
-                            )
+                            .filter((member) => member.key?.toLowerCase() === "department_head")
                             .map((member) => {
-                              const user = userData.find(
-                                (u) => u._id === member.user_id
-                              );
+                              const user = userData.find((u) => u._id === member.user_id);
                               const fullName = user
                                 ? user.fullname || `${user.fname || ""} ${user.lname || ""}`
                                 : member.user_id;
@@ -230,17 +184,12 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
                 </Col>
               </Row>
 
-              {/* Application Owner Section */}
+              {/* Owner Section */}
               <Row className="mb-3">
                 <Col md={6}>
-                  <Form.Group controlId="applicationOwner">
+                  <Form.Group>
                     <Form.Label>Application Owner</Form.Label>
-                    <Form.Select
-                      name="applicationOwner"
-                      value={formData.applicationOwner}
-                      onChange={handleInputChange}
-                      required
-                    >
+                    <Form.Select name="applicationOwner" value={formData.applicationOwner} onChange={handleInputChange}>
                       <option value="">Select Owner</option>
                       {userData.map((owner) => (
                         <option key={owner._id} value={owner._id}>
@@ -251,39 +200,34 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
                   </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Group controlId="applicationMail">
+                  <Form.Group>
                     <Form.Label>Application Mail</Form.Label>
-                    <Form.Control type="email" value={formData.applicationMail} disabled />
+                    <Form.Control type="text" value={formData.applicationMail} disabled />
                   </Form.Group>
                 </Col>
               </Row>
 
               <Row className="mb-3">
                 <Col md={6}>
-                  <Form.Group controlId="applicationContact">
+                  <Form.Group>
                     <Form.Label>Application Contact</Form.Label>
                     <Form.Control type="text" value={formData.applicationContact} disabled />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Group controlId="assignedBy">
+                  <Form.Group>
                     <Form.Label>Assigned By</Form.Label>
                     <Form.Control type="text" value={formData.assignedBy} disabled />
                   </Form.Group>
                 </Col>
               </Row>
 
-              {/* Region & Security Group */}
+              {/* Region & Security */}
               <Row className="mb-3">
                 <Col md={6}>
-                  <Form.Group controlId="region">
+                  <Form.Group>
                     <Form.Label>Region</Form.Label>
-                    <Form.Select
-                      name="region"
-                      value={formData.region}
-                      onChange={handleInputChange}
-                      required
-                    >
+                    <Form.Select name="region" value={formData.region} onChange={handleInputChange}>
                       <option value="">Select Region</option>
                       {regionData.map((region) => (
                         <option key={region.region_id} value={region.region_id}>
@@ -294,14 +238,9 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
                   </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Group controlId="securityGroup">
+                  <Form.Group>
                     <Form.Label>Security Group</Form.Label>
-                    <Form.Select
-                      name="securityGroup"
-                      value={formData.securityGroup}
-                      onChange={handleInputChange}
-                      required
-                    >
+                    <Form.Select name="securityGroup" value={formData.securityGroup} onChange={handleInputChange}>
                       <option value="">Select Security Group</option>
                       {securityGroupData.map((group) => (
                         <option key={group.secg_id} value={group.secg_id}>
@@ -313,36 +252,26 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
                 </Col>
               </Row>
 
-              {/* Request ID & Comments */}
+              {/* Request & Comments */}
               <Row className="mb-3">
                 <Col md={6}>
-                  <Form.Group controlId="requestId">
+                  <Form.Group>
                     <Form.Label>Request ID</Form.Label>
-                    <Form.Control
-                      name="requestId"
-                      value={formData.requestId}
-                      onChange={handleInputChange}
-                    />
+                    <Form.Control name="requestId" value={formData.requestId} onChange={handleInputChange} />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Group controlId="comments">
+                  <Form.Group>
                     <Form.Label>Comments</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={2}
-                      name="comments"
-                      value={formData.comments}
-                      onChange={handleInputChange}
-                    />
+                    <Form.Control as="textarea" rows={2} name="comments" value={formData.comments} onChange={handleInputChange} />
                   </Form.Group>
                 </Col>
               </Row>
 
-              {/* Select multiple VMs */}
+              {/* VM Select */}
               <Row className="mb-3">
                 <Col md={12}>
-                  <Form.Group controlId="selectedVMs">
+                  <Form.Group>
                     <Form.Label>Select VMs (multiple)</Form.Label>
                     <Form.Select
                       name="selectedVMs"
@@ -351,13 +280,9 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
                       onChange={(e) =>
                         setFormData((prev) => ({
                           ...prev,
-                          selectedVMs: Array.from(
-                            e.target.selectedOptions,
-                            (option) => option.value
-                          ),
+                          selectedVMs: Array.from(e.target.selectedOptions, (option) => option.value),
                         }))
                       }
-                      required
                     >
                       {vmData.map((vm) => (
                         <option key={vm.vm_id} value={vm.vm_id}>
@@ -371,12 +296,8 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
 
               {/* Submit Buttons */}
               <div className="d-flex justify-content-center">
-                <Button type="submit" variant="success" className="me-2">
-                  {editingAppMapping ? "Update" : "Add"}
-                </Button>
-                <Button variant="danger" onClick={onClose}>
-                  Cancel
-                </Button>
+                <Button type="submit" variant="success" className="me-2">ADD</Button>
+                <Button variant="danger" onClick={onClose}>CANCEL</Button>
               </div>
             </Form>
           </div>
@@ -387,3 +308,4 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
 };
 
 export default AppMappingForm;
+ 

@@ -21,7 +21,7 @@ const Servicesform = ({ onClose, onSave, editingService, viewOnly }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ 
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -29,6 +29,13 @@ const Servicesform = ({ onClose, onSave, editingService, viewOnly }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Session expired. Please log in again.");
+      window.location.href = "/login";
+      return;
+    }
 
     const updatedFormData = {
       ...formData,
@@ -38,13 +45,14 @@ const Servicesform = ({ onClose, onSave, editingService, viewOnly }) => {
     try {
       const method = editingService ? "PUT" : "POST";
       const url = editingService
-        ? `http://localhost:5000/services/${editingService._id}`
-        : "http://localhost:5000/services";
+        ? `http://localhost:5000/api/services/${editingService._id}`
+        : "http://localhost:5000/api/services";
 
       const response = await fetch(url, {
         method: method,
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // ✅ Attach JWT token
         },
         body: JSON.stringify(updatedFormData),
       });
@@ -64,8 +72,8 @@ const Servicesform = ({ onClose, onSave, editingService, viewOnly }) => {
         alert("Service added successfully!");
       }
 
-      onSave(); 
-      onClose(); 
+      onSave();
+      onClose();
     } catch (error) {
       console.error("Error during service save:", error);
       alert(`Error saving service: ${error.message}`);
@@ -78,9 +86,15 @@ const Servicesform = ({ onClose, onSave, editingService, viewOnly }) => {
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">
-              {editingService ? "Edit Service Definition" : "Add Service Definition"}
+              {editingService
+                ? "Edit Service Definition"
+                : "Add Service Definition"}
             </h5>
-            <button type="button" className="btn-close" onClick={onClose}></button>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={onClose}
+            ></button>
           </div>
           <div className="modal-body">
             <form onSubmit={handleSubmit}>
@@ -108,7 +122,7 @@ const Servicesform = ({ onClose, onSave, editingService, viewOnly }) => {
                 </label>
                 <div className="col-sm-9">
                   <input
-                    type="number" 
+                    type="number"
                     className="form-control"
                     id="ports"
                     name="ports"
@@ -116,7 +130,7 @@ const Servicesform = ({ onClose, onSave, editingService, viewOnly }) => {
                     value={formData.ports}
                     onChange={handleChange}
                     required
-                    disabled={viewOnly} 
+                    disabled={viewOnly}
                   />
                 </div>
               </div>
@@ -147,9 +161,10 @@ const Servicesform = ({ onClose, onSave, editingService, viewOnly }) => {
                     className="form-control"
                     id="notes"
                     name="notes"
+                    placeholder="Enter service description"
                     value={formData.notes}
                     onChange={handleChange}
-                    disabled={viewOnly} 
+                    disabled={viewOnly}
                   ></textarea>
                 </div>
               </div>
@@ -160,7 +175,6 @@ const Servicesform = ({ onClose, onSave, editingService, viewOnly }) => {
                   </button>
                 </div>
               )}
-
               <button
                 type="button"
                 className="btn btn-danger mt-3"

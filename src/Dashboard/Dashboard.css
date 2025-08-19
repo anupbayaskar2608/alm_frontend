@@ -1,3 +1,10 @@
+.blurred {
+  filter: blur(4px);
+  pointer-events: none; 
+  transition: filter 0.3s ease;
+}
+
+
 .online-indicator {
   width: 20px;
   height: 20px;
@@ -35,22 +42,21 @@ body {
   margin-left: auto;
   margin-right: 20px;
   font-size: 14px;
-  color: #837d7d;
+  color: #797599;
+
+  animation: moveLeftRight 7s linear infinite alternate;
+  white-space: nowrap;
 }
 
-@keyframes moveRightToLeft {
+@keyframes moveLeftRight {
   0% {
     transform: translateX(0%);
   }
   100% {
-    transform: translateX(-80%);
+    transform: translateX(-75%);
   }
 }
 
-.welcome-text {
-  animation: moveRightToLeft 10s linear infinite;
-  white-space: nowrap;
-}
 
 
 .sidebar {
@@ -230,3 +236,8 @@ body {
     padding: 20px;
   }
 }
+
+
+
+
+

@@ -56,15 +56,17 @@ function Usersform({ onClose, onSave, editingUser, viewOnly }) {
     }
 
     try {
+      const token = localStorage.getItem('token');
       const method = editingUser ? "PUT" : "POST"; 
       const url = editingUser
-        ? `http://localhost:5000/users/${editingUser.user_id}`
-        : "http://localhost:5000/users"; 
+        ? `http://localhost:5000/api/users/${editingUser._id}`
+        : "http://localhost:5000/api/users"; 
 
       const response = await fetch(url, {
         method: method,
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(formData),
       });
@@ -129,7 +131,7 @@ function Usersform({ onClose, onSave, editingUser, viewOnly }) {
                 </div>
               </div>
             </div>
-                <div className="mb-3 p-2 rounded d-flex align-items-center justify-content-between">
+            <div className="mb-3 p-2 rounded d-flex align-items-center justify-content-between">
               <label htmlFor="username" className="form-label mb-0">Username</label>
               <input
                 type="text"
@@ -142,7 +144,7 @@ function Usersform({ onClose, onSave, editingUser, viewOnly }) {
                 required
               />
             </div>
-                <div className="mb-3 d-flex">
+            <div className="mb-3 d-flex">
               <div className="col me-2 p-2 rounded d-flex align-items-center justify-content-between">
                 <label htmlFor="fname" className="form-label mb-0">First Name</label>
                 <input
@@ -170,7 +172,7 @@ function Usersform({ onClose, onSave, editingUser, viewOnly }) {
                 />
               </div>
             </div>
-                <div className="mb-3 d-flex">
+            <div className="mb-3 d-flex">
               <div className="col me-2 p-2 rounded d-flex align-items-center justify-content-between">
                 <label htmlFor="email" className="form-label mb-0">Email Address</label>
                 <input
@@ -198,7 +200,7 @@ function Usersform({ onClose, onSave, editingUser, viewOnly }) {
                 />
               </div>
             </div>
-                <div className="mb-3 d-flex">
+            <div className="mb-3 d-flex">
               <div className="col me-2 p-2 rounded d-flex align-items-center justify-content-between">
                 <label className="form-label mb-0">Gender</label>
                 <div>
@@ -257,7 +259,7 @@ function Usersform({ onClose, onSave, editingUser, viewOnly }) {
                 </select>
               </div>
             </div>
-                {!viewOnly && (
+            {!viewOnly && (
               <>
                 <div className="mb-3 p-2 rounded d-flex align-items-center justify-content-between">
                   <label htmlFor="password" className="form-label mb-0">Create Password</label>
