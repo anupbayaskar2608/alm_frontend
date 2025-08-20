@@ -15,9 +15,9 @@ const Workloads = () => {
 
   const fetchWorkloads = async () => {
     try {
-      const response = await fetch("http://localhost:5000/workloads");
+      const response = await fetch("http://localhost:5000/api/workloads");
       const data = await response.json();
-      setWorkloads(data.vmcontainers || []);
+      setWorkloads(data.workloads || []);
     } catch (error) {
       console.error("Error fetching workloads:", error);
     }
@@ -26,8 +26,8 @@ const Workloads = () => {
   const handleSave = async (formData) => {
     const method = editingWorkload ? "PUT" : "POST";
     const url = editingWorkload
-      ? `http://localhost:5000/workloads/${editingWorkload._id}`
-      : "http://localhost:5000/workloads";
+      ? `http://localhost:5000/api/workloads/${editingWorkload._id}`
+      : "http://localhost:5000/api/workloads";
 
     try {
       const response = await fetch(url, {
@@ -48,8 +48,10 @@ const Workloads = () => {
     if (!window.confirm("Are you sure you want to delete this workload?")) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/workloads/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/workloads/${id}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deletedBy: "currentUser" }),
       });
       if (!response.ok) throw new Error("Delete failed");
       fetchWorkloads();

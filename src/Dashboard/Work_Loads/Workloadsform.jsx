@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const WorkloadsForm = ({ onClose, onSave, editingWorkload }) => {
+const WorkloadsForm = ({ onClose, onSave, editingWorkload, lastVmNumber }) => {
   const [formData, setFormData] = useState({
     vm_id: "",
     vm_name: "",
@@ -10,18 +10,28 @@ const WorkloadsForm = ({ onClose, onSave, editingWorkload }) => {
     notes: "",
     nic_ids: [],
   });
-
   const [networkProfiles, setNetworkProfiles] = useState([]);
+  const [errors, setErrors] = useState({});
 
-  // Fetch IP Pools
+  // Fetch network profiles
   useEffect(() => {
     axios
-      .get("http://localhost:5000/ippools")
-      .then((res) => setNetworkProfiles(res.data.ip_pools || []))
-      .catch((err) => console.error("Failed to fetch network profiles", err));
+      .get("http://localhost:5000/api/ip-pools", {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      .then((res) => {
+        const profiles = res.data.ip_pools || res.data || [];
+        setNetworkProfiles(profiles);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch network profiles:", err.message, err.response);
+        setErrors((prev) => ({ ...prev, network: "Failed to load network profiles" }));
+      });
   }, []);
 
-  // Populate form when editing
+  // Populate form when editing or adding
   useEffect(() => {
     if (editingWorkload) {
       setFormData({
@@ -32,46 +42,81 @@ const WorkloadsForm = ({ onClose, onSave, editingWorkload }) => {
         notes: editingWorkload.notes || "",
         nic_ids: editingWorkload.nic_ids || [],
       });
+    } else {
+      const newId = `VM${String(lastVmNumber + 1).padStart(4, "0")}`;
+      setFormData((prev) => ({ ...prev, vm_id: newId }));
     }
-  }, [editingWorkload]);
+  }, [editingWorkload, lastVmNumber]);
 
   // Update NICs dynamically
   useEffect(() => {
-    const count = parseInt(formData.NICs);
+    const count = parseInt(formData.NICs) || 1;
     setFormData((prev) => ({
       ...prev,
-      nic_ids: Array(count).fill(null).map((_, i) => ({
-        id: `NIC${i + 1}`,
-        ip: prev.nic_ids[i]?.ip || "",
-        netLabel:
-          prev.nic_ids[i]?.netLabel ||
-          (networkProfiles.length > 0 ? networkProfiles[0].netLabel : "No Network Profiles Available"),
-      })),
+      nic_ids: Array(count)
+        .fill(null)
+        .map((_, i) => ({
+          id: `NIC${i + 1}`,
+          ip: prev.nic_ids[i]?.ip || "",
+          netLabel:
+            prev.nic_ids[i]?.netLabel ||
+            (networkProfiles.length > 0 ? networkProfiles[0].netLabel : ""),
+        })),
     }));
   }, [formData.NICs, networkProfiles]);
 
-  // General input change
+  // Handle text/select input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // NIC change
+  // Handle NIC changes
   const handleNICChange = (index, field, value) => {
     const updated = [...formData.nic_ids];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = {
+      ...updated[index],
+      [field]: value,
+      ...(field === "netLabel" ? { ip: "" } : {}),
+    };
     setFormData((prev) => ({ ...prev, nic_ids: updated }));
+    setErrors((prev) => ({ ...prev, [`nic${index}`]: "" }));
   };
 
-  // Save
+  // Get unassigned IPs for dropdown
+  const getUnassignedIps = (profile) => {
+    if (!profile) return [];
+    return Array.isArray(profile.IP_range)
+      ? profile.IP_range
+          .filter((ipObj) => ipObj.key !== "assigned") // Only unassigned IPs
+          .map((ipObj) => ipObj.value)
+      : [];
+  };
+
+  // Validate form data
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.vm_name) newErrors.vm_name = "Name is required";
+    if (!formData.vm_guest_os) newErrors.vm_guest_os = "OS is required";
+    formData.nic_ids.forEach((nic, index) => {
+      if (!nic.ip) newErrors[`nic${index}`] = `IP for NIC${index + 1} is required`;
+      if (!nic.netLabel) newErrors[`nic${index}`] = `Network Label for NIC${index + 1} is required`;
+    });
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Submit
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
     onSave(formData);
   };
 
   return (
     <div className="modal show d-block" tabIndex="-1">
-      <div className="modal-dialog modal-dialog-centered modal-xl">
+      <div className="modal-dialog modal-dialog-centered modal-lg">
         <div className="modal-content border-0">
           <div className="modal-header">
             <h5 className="modal-title fw-semibold">
@@ -82,6 +127,7 @@ const WorkloadsForm = ({ onClose, onSave, editingWorkload }) => {
 
           <form onSubmit={handleSubmit}>
             <div className="modal-body">
+              {errors.network && <div className="alert alert-danger">{errors.network}</div>}
               <div className="row mb-3">
                 <div className="col-md-6">
                   <label className="form-label">Name</label>
@@ -93,6 +139,7 @@ const WorkloadsForm = ({ onClose, onSave, editingWorkload }) => {
                     onChange={handleChange}
                     required
                   />
+                  {errors.vm_name && <small className="text-danger">{errors.vm_name}</small>}
                 </div>
                 <div className="col-md-6">
                   <label className="form-label">OS</label>
@@ -104,6 +151,7 @@ const WorkloadsForm = ({ onClose, onSave, editingWorkload }) => {
                     onChange={handleChange}
                     required
                   />
+                  {errors.vm_guest_os && <small className="text-danger">{errors.vm_guest_os}</small>}
                 </div>
               </div>
 
@@ -135,47 +183,62 @@ const WorkloadsForm = ({ onClose, onSave, editingWorkload }) => {
                 </div>
               </div>
 
-              {formData.nic_ids.map((nic, index) => (
-                <div className="row mb-2 bg-light rounded py-2 px-3" key={index}>
-                  <div className="col-md-4 mb-2">
-                    <label className="form-label">NIC ID</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={nic.id}
-                      readOnly
-                    />
+              {/* NIC Fields */}
+              {formData.nic_ids.map((nic, index) => {
+                const selectedProfile = networkProfiles.find((p) => p.netLabel === nic.netLabel);
+                const availableIps = getUnassignedIps(selectedProfile);
+
+                return (
+                  <div className="row mb-3 align-items-center" key={index}>
+                    <div className="col-md-4">
+                      <label className="form-label">NIC ID</label>
+                      <input type="text" className="form-control" value={nic.id} readOnly />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">IP Address</label>
+                      <select
+                        className="form-select"
+                        value={nic.ip}
+                        onChange={(e) => handleNICChange(index, "ip", e.target.value)}
+                        required
+                      >
+                        <option value="">Select IP</option>
+                        {availableIps.length > 0
+                          ? availableIps.map((ip, idx) => (
+                              <option key={idx} value={ip}>
+                                {ip}
+                              </option>
+                            ))
+                          : (
+                              <option disabled>No Unassigned IPs</option>
+                            )}
+                      </select>
+                      {errors[`nic${index}`] && <small className="text-danger">{errors[`nic${index}`]}</small>}
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Network Label</label>
+                      <select
+                        className="form-select"
+                        value={nic.netLabel}
+                        onChange={(e) => handleNICChange(index, "netLabel", e.target.value)}
+                        required
+                      >
+                        <option value="">Select Network Label</option>
+                        {networkProfiles.length > 0
+                          ? networkProfiles.map((p) => (
+                              <option key={p._id} value={p.netLabel}>
+                                {p.netLabel}
+                              </option>
+                            ))
+                          : (
+                              <option disabled>No Network Profiles Available</option>
+                            )}
+                      </select>
+                      {errors[`nic${index}`] && <small className="text-danger">{errors[`nic${index}`]}</small>}
+                    </div>
                   </div>
-                  <div className="col-md-4 mb-2">
-                    <label className="form-label">IP Address</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. 192.168.1.10"
-                      value={nic.ip}
-                      onChange={(e) => handleNICChange(index, "ip", e.target.value)}
-                    />
-                  </div>
-                  <div className="col-md-4 mb-2">
-                    <label className="form-label">Network Label</label>
-                    <select
-                      className="form-select"
-                      value={nic.netLabel}
-                      onChange={(e) => handleNICChange(index, "netLabel", e.target.value)}
-                    >
-                      {networkProfiles.length > 0 ? (
-                        networkProfiles.map((p) => (
-                          <option key={p._id} value={p.netLabel}>
-                            {p.netLabel}
-                          </option>
-                        ))
-                      ) : (
-                        <option>No Network Profiles Available</option>
-                      )}
-                    </select>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="modal-footer">

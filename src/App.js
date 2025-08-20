@@ -10,7 +10,7 @@ import Securitygroups from './Dashboard/Security_Groups/Securitygroups';
 import Appprofile from './Dashboard/App_Profile/Appprofile';
 import Workloads from './Dashboard/Work_Loads/Workloads';
 import Appmapping from './Dashboard/App_Mapping/Appmapping';
-import Networkprofile from './Dashboard/Network_Profile/Networkprofile';
+import Networkprofile from './Dashboard/Network_Profile/Networkprofiles';
 import Usersform from './Dashboard/Users/Usersform';
 
 function App() {

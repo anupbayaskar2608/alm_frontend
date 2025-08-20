@@ -44,7 +44,7 @@ const AppMappingForm = ({ onClose, onSave, editingAppMapping }) => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch("http://localhost:5000/appvms");
+      const response = await fetch("http://localhost:5000/api/appvms");
       const data = await response.json();
       setApmData(data.dbAplication || []);
       setDepartmentData(data.dbDepartments || []);

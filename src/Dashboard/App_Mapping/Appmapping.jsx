@@ -25,7 +25,7 @@ const Appmapping = () => {
 
   const fetchAppMapping = async () => {
     try {
-      const response = await fetch("http://localhost:5000/appvms");
+      const response = await fetch("http://localhost:5000/api/appvms");
       const data = await response.json();
       setAppMapping(data);
     } catch (error) {
@@ -37,7 +37,7 @@ const Appmapping = () => {
     if (!window.confirm("Are you sure you want to delete this Application Mapping?")) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/appvms/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/appvms/${id}`, {
         method: "DELETE",
       });
 
@@ -64,8 +64,8 @@ const Appmapping = () => {
   const handleFormSave = async (formData) => {
     try {
       const url = editingAppMapping
-        ? `http://localhost:5000/appvms/${editingAppMapping._id}`
-        : `http://localhost:5000/appvms`;
+        ? `http://localhost:5000/api/appvms/${editingAppMapping._id}`
+        : `http://localhost:5000/api/appvms`;
 
       const method = editingAppMapping ? "PUT" : "POST";
 
